@@ -6,7 +6,7 @@
 
 void display(Number a)
 {
-    if (a.sign == 1)
+    if (a.sign == positive)
         printf("%s\n", a.str);
     else
         printf("-%s\n", a.str);
@@ -56,20 +56,30 @@ Digit *createDigit(int t)
     return a;
 }
 
-Number *createNum(char *s)
+void initNum(Number **n)
 {
-    Number *a = (Number *)malloc(sizeof(Number));
+    *n = (Number *)malloc(sizeof(Number));
+    Number *a = *n;
     a->int_part = NULL;
     a->dec_part = NULL;
+    a->str = NULL;
+    a->sign = positive;
+    a->int_len = 0;
+    a->dec_len = 0;
+}
+
+Number *createNum(char *s)
+{
+    Number *a;
+    initNum(&a);
     int i = 0, count = 0;
     int d;
     Digit *digit;
-    a->sign = 1; // sign is 1 for positive number and 0 for negative number
     a->str = s;
     if (s[0] == '-')
     {
         i = 1;
-        a->sign = 0;
+        a->sign = negative;
         a->str = s + 1;
     }
     count = i;
@@ -163,7 +173,7 @@ int compare(Number a, Number b)
         }
     }
 
-    if (a.sign == 1)
+    if (a.sign == positive)
     {
         return cmp;
     }
@@ -176,4 +186,117 @@ int compare(Number a, Number b)
         else
             return 0;
     }
+}
+
+Number *abs_add(Number a, Number b)
+{
+    Number *c;
+    initNum(&c);
+    Digit *digit;
+    Digit *a_cur = a.dec_part, *b_cur = b.dec_part;
+    int i = 0, sum = 0, s = 0, cr = 0;
+    int t = a.dec_len - b.dec_len;
+    if (t > 0)
+    {
+        c->dec_len = a.dec_len;
+        c->dec_part = createDigit(a_cur->d);
+        a_cur = a_cur->next;
+        digit = c->dec_part;
+        for (i = 1; i < t; i++)
+        {
+            digit->next = createDigit(a_cur->d);
+            digit = digit->next;
+            a_cur = a_cur->next;
+        }
+    }
+    else
+    {
+        c->dec_len = b.dec_len;
+        c->dec_part = createDigit(b_cur->d);
+        a_cur = a_cur->next;
+        digit = c->dec_part;
+        for (i = 1; i < -t; i++)
+        {
+            digit->next = createDigit(b_cur->d);
+            digit = digit->next;
+            b_cur = b_cur->next;
+        }
+    }
+
+    for (i = t; i < c->dec_len; i++)
+    {
+        sum = a_cur->d + b_cur->d + cr;
+        s = sum % 10;
+        cr = sum / 10;
+        digit->next = createDigit(s);
+        digit = digit->next;
+        a_cur = a_cur->next;
+        b_cur = b_cur->next;
+    }
+
+    t = a.int_len - b.int_len;
+    int min;
+    c->int_len = t > 0 ? a.int_len : b.int_len;
+    if (t > 0)
+    {
+        c->int_len = a.int_len;
+        min = b.int_len;
+    }
+    else
+    {
+        c->int_len = b.int_len;
+        min = a.int_len;
+    }
+
+    b_cur = b.int_part;
+    a_cur = a.int_part;
+    sum = a_cur->d + b_cur->d + cr;
+    s = sum % 10;
+    cr = sum / 10;
+    c->int_part = createDigit(s);
+    digit = c->int_part;
+    a_cur = a_cur->next;
+    b_cur = b_cur->next;
+
+    for (i = 1; i < min; i++)
+    {
+        sum = a_cur->d + b_cur->d + cr;
+        s = sum % 10;
+        cr = sum / 10;
+        digit->next = createDigit(s);
+        digit = digit->next;
+        a_cur = a_cur->next;
+        b_cur = b_cur->next;
+    }
+    if (t > 0)
+    {
+        for (i = 0; i < t; i++)
+        {
+            sum = a_cur->d + cr;
+            s = sum % 10;
+            cr = sum / 10;
+            digit->next = createDigit(s);
+            digit = digit->next;
+            a_cur = a_cur->next;
+        }
+    }
+    else
+    {
+        for (i = 0; i < -t; i++)
+        {
+            sum = b_cur->d + cr;
+            s = sum % 10;
+            cr = sum / 10;
+            digit->next = createDigit(s);
+            digit = digit->next;
+            b_cur = b_cur->next;
+        }
+    }
+    if (cr > 0)
+    {
+        c->int_len += 1;
+        digit->next = createDigit(cr);
+    }
+    to_string(c);
+    return c;
 }

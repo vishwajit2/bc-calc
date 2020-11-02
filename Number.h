@@ -18,12 +18,16 @@ typedef struct Number
     struct Digit *int_part, *dec_part;
 } Number;
 
-Number add(Number a, Number b);
+#define positive 1
+#define negative 0
+
+Number *abs_add(Number a, Number b);
 Number subtract(Number a, Number b);
 Number multiply(Number a, Number b);
 Number divide(Number a, Number b);
 void display(Number a);
 void to_string(Number *a);
+void initNum(Number **n);
 Number *createNum(char *s); // create a number from given string and return pointer to that number
 Digit *createDigit(int t);  // create a Digit from given int and return pointer to that Digit
 int compare(Number a, Number b);
