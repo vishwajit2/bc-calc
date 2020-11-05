@@ -21,10 +21,14 @@ typedef struct Number
 #define positive 1
 #define negative 0
 
+int compare(Number a, Number b);
+int abs_compare(Number a, Number b);
 Number *abs_add(Number a, Number b);
-Number subtract(Number a, Number b);
-Number multiply(Number a, Number b);
-Number divide(Number a, Number b);
+Number *abs_subtract(Number a, Number b);
+Number *add(Number a, Number b);
+Number *subtract(Number a, Number b);
+Number *multiply(Number a, Number b);
+Number *divide(Number a, Number b);
 void display(Number a);
 void to_string(Number *a);
 void initNum(Number **n);
