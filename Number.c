@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 
+Digit *combined_int_dec(Number a);
+Digit *emptyList(int n);
+
 void display(Number a)
 {
     if (a.sign == positive)
@@ -502,6 +505,109 @@ Number *abs_subtract(Number a, Number b)
     {
         printf("expected a > b");
     }
+    to_string(c);
+    return c;
+}
+
+Digit *combined_int_dec(Number a)
+{
+    Digit *a1 = a.dec_part;
+    if (a1 == NULL)
+        a1 = a.int_part;
+    else
+    {
+        Digit *a_cur = a1;
+        while (a_cur->next)
+        {
+            a_cur = a_cur->next;
+        }
+        a_cur->next = a.int_part;
+    }
+    return a1;
+}
+
+Digit *emptyList(int n)
+{
+    Digit *res = createDigit(0);
+    Digit *t = res;
+    for (int i = 1; i < n; i++)
+    {
+        t->next = createDigit(0);
+        t = t->next;
+    }
+    return res;
+}
+
+Number *multiply(Number a, Number b)
+{
+    // we can ignore position of decimal point and multipply and consider it at end
+    Number *c;
+    initNum(&c);
+    Digit *a1 = combined_int_dec(a);
+    Digit *b1 = combined_int_dec(b);
+    int max_size = a.int_len + b.int_len + a.dec_len + b.dec_len;
+    Digit *result = emptyList(max_size);
+    Digit *res1 = result, *res2, *a2 = a1;
+    while (b1)
+    {
+
+        int carry = 0;
+        res2 = res1;
+        a1 = a2;
+        while (a1)
+        {
+            int mul = a1->d * b1->d + carry;
+            res2->d += mul % 10;
+
+            // resultant Node  can be greater than 9
+            carry = mul / 10 + res2->d / 10;
+            res2->d = res2->d % 10;
+
+            a1 = a1->next;
+            res2 = res2->next;
+        }
+        // if carry is remaining from last multiplication
+        if (carry > 0)
+        {
+            res2->d += carry;
+        }
+
+        res1 = res1->next;
+        b1 = b1->next;
+    }
+    // now res2 is at end and if res2.d == 0 we need to remove pointer to that
+    if (res2->d == 0)
+    {
+        c->int_len = a.int_len + b.int_len - 1;
+        while (res1->next->next)
+        {
+            res1 = res1->next;
+        }
+        res1->next = NULL;
+        free(res2);
+    }
+    else
+    {
+        c->int_len = a.int_len + b.int_len;
+    }
+
+    c->dec_len = a.dec_len + b.dec_len;
+    c->sign = (a.sign == b.sign); // sign of c is positive(1) if a.sign == b.sign
+    if (c->dec_len == 0)
+    {
+        c->int_part = result;
+    }
+    else
+    {
+        c->dec_part = result;
+        for (int i = 0; i < c->dec_len - 1; i++)
+        {
+            result = result->next;
+        }
+        c->int_part = result->next;
+        result->next = NULL;
+    }
+
     to_string(c);
     return c;
 }
