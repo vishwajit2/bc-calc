@@ -4,11 +4,19 @@
 #include <stdio.h>
 #include <string.h>
 
-Digit *combined_int_dec(Number a);
+void combined_int_dec(Number a, Digit **combined, Digit **decLast);
 Digit *emptyList(int n);
 
 void display(Number a)
 {
+    Digit *t = a.int_part;
+    while (t)
+    {
+        printf("%d", t->d);
+        t = t->next;
+    }
+    printf(" ");
+
     if (a.sign == positive)
         printf("%s\n", a.str);
     else
@@ -18,6 +26,12 @@ void display(Number a)
 void to_string(Number *a)
 {
     int num_size = a->int_len + a->dec_len + 2; // +2 for decimal point and /0
+    if (a->str != NULL)
+    {
+        free(a->str);
+        a->str = NULL;
+    }
+
     char *s = (char *)malloc(num_size * sizeof(char));
 
     Digit *current = a->int_part;
@@ -223,7 +237,7 @@ Number *subtract(Number a, Number b)
 {
     // change sign of b and do addition
     b.sign = !b.sign;
-    add(a, b);
+    return add(a, b);
 }
 
 Number *abs_add(Number a, Number b)
@@ -342,6 +356,7 @@ Number *abs_add(Number a, Number b)
         digit->next = createDigit(cr);
     }
     to_string(c);
+    removeIntZeros(c);
     return c;
 }
 
@@ -407,24 +422,24 @@ Number *abs_subtract(Number a, Number b)
         i = 1;
         c->dec_part = createDigit(0);
         digit = c->dec_part;
-    }
-    for (i = i; i < c->dec_len; i++)
-    {
-        temp = a_cur->d - b_cur->d - cr;
-        if (temp < 0)
+        for (i = i; i < c->dec_len; i++)
         {
-            cr = 1;
-            diff = 10 + temp;
+            temp = a_cur->d - b_cur->d - cr;
+            if (temp < 0)
+            {
+                cr = 1;
+                diff = 10 + temp;
+            }
+            else
+            {
+                cr = 0;
+                diff = temp;
+            }
+            digit->next = createDigit(diff);
+            digit = digit->next;
+            a_cur = a_cur->next;
+            b_cur = b_cur->next;
         }
-        else
-        {
-            cr = 0;
-            diff = temp;
-        }
-        digit->next = createDigit(diff);
-        digit = digit->next;
-        a_cur = a_cur->next;
-        b_cur = b_cur->next;
     }
 
     t = a.int_len - b.int_len;
@@ -482,6 +497,10 @@ Number *abs_subtract(Number a, Number b)
         for (i = 0; i < t; i++)
         {
             temp = a_cur->d - cr;
+            // printf("%d %d \n", a_cur->d, cr);
+            // printf("in sub...temp %d \n", temp);
+            // display(a);
+            // display(b);
             if (temp < 0)
             {
                 cr = 1;
@@ -499,31 +518,36 @@ Number *abs_subtract(Number a, Number b)
     }
     else
     {
-        printf("expected a > b");
+        printf("expected a > b\0");
     }
     if (cr > 0)
     {
-        printf("expected a > b");
+        printf("expected a > b\0");
     }
     to_string(c);
+    removeIntZeros(c);
     return c;
 }
 
-Digit *combined_int_dec(Number a)
+void combined_int_dec(Number a, Digit **combined, Digit **decLast)
 {
-    Digit *a1 = a.dec_part;
-    if (a1 == NULL)
-        a1 = a.int_part;
+    Digit *comb = *combined;
+    comb = a.dec_part;
+    if (comb == NULL)
+    {
+        comb = a.int_part;
+        *decLast = NULL;
+    }
     else
     {
-        Digit *a_cur = a1;
+        Digit *a_cur = comb;
         while (a_cur->next)
         {
             a_cur = a_cur->next;
         }
         a_cur->next = a.int_part;
+        *decLast = a_cur;
     }
-    return a1;
 }
 
 Digit *emptyList(int n)
@@ -543,8 +567,9 @@ Number *multiply(Number a, Number b)
     // we can ignore position of decimal point and multipply and consider it at end
     Number *c;
     initNum(&c);
-    Digit *a1 = combined_int_dec(a);
-    Digit *b1 = combined_int_dec(b);
+    Digit *a1, *a_decLast, *b1, *b_decLast;
+    combined_int_dec(a, &a1, &a_decLast);
+    combined_int_dec(b, &b1, &b_decLast);
     int max_size = a.int_len + b.int_len + a.dec_len + b.dec_len;
     Digit *result = emptyList(max_size);
     Digit *res1 = result, *res2, *a2 = a1;
@@ -607,7 +632,195 @@ Number *multiply(Number a, Number b)
         c->int_part = result->next;
         result->next = NULL;
     }
+    // seperate int and dec part of original nums
+    if (a_decLast)
+    {
+        a_decLast->next = NULL;
+    }
+    if (b_decLast)
+    {
+        b_decLast->next = NULL;
+    }
 
     to_string(c);
     return c;
+}
+// multipy by 10^t
+Number *LeftShift(Number n, int t)
+{
+    int size = n.int_len;
+    if (t >= n.dec_len)
+    {
+        size = size + t + 1; // 1 for \0
+        char *s = (char *)malloc(size * sizeof(char));
+        int i = 0;
+        for (i = 0; i < n.int_len; i++)
+        {
+            s[i] = n.str[i];
+        }
+        // i+1 to compensate for '.'
+        while (n.str[i + 1] != '\0')
+        {
+            s[i] = n.str[i + 1];
+            i++;
+        }
+        while (i < size - 1)
+        {
+            s[i] = '0';
+            i++;
+        }
+        s[i] = '\0';
+        return createNum(s);
+    }
+    else
+    {
+        size = size + n.dec_len + 2; // \0 and '.'
+        char *s = (char *)malloc(size * sizeof(char));
+        int i = 0;
+        for (i = 0; i < n.int_len; i++)
+        {
+            s[i] = n.str[i];
+        }
+        while (t--)
+        {
+            s[i] = n.str[i + 1];
+            i++;
+        }
+        s[i++] = '.';
+        while (n.str[i] != '\0')
+        {
+            s[i] = n.str[i];
+            i++;
+        }
+        s[i] = '\0';
+        Number *a = createNum(s);
+        a->sign = n.sign;
+    }
+}
+
+Number *divide(Number a, Number b, int scale)
+{
+    // first let's convert both into int by muliplying by common factor .
+    if (abs_compare(*LeftShift(a, scale), b) == -1)
+    {
+        return num_k(0);
+    }
+    int len = 0;
+    int mult = a.dec_len > b.dec_len ? a.dec_len : b.dec_len;
+    Number *a1, *b1, *divisor, *temp = NULL;
+    a1 = LeftShift(a, mult + scale);
+    b1 = LeftShift(b, mult);
+    Digit *c1 = NULL, *digit, *tempDigit;
+    divisor = LeftShift(*b1, a1->int_len - b1->int_len);
+    int t = 0;
+    while (compare(*a1, *b1) >= 0)
+    {
+        len++;
+        // printf("a ");
+        // display(*a1);
+        // printf("b ");
+        // display(*b1);
+        // printf("divisor ");
+        // display(*divisor);
+        temp = NULL;
+        temp = subtract(*a1, *divisor);
+        // printf("temp ");
+        // display(*temp);
+        t = 0;
+        while (compare(*temp, *num_k(0)) >= 0)
+        {
+            a1 = temp;
+            temp = subtract(*a1, *divisor);
+            t++;
+        }
+        digit = createDigit(t);
+        digit->next = c1;
+        c1 = digit;
+        // divide divisor by 10
+        tempDigit = divisor->int_part;
+        divisor->int_part = tempDigit->next;
+        free(tempDigit);
+        divisor->int_len -= 1;
+        to_string(divisor);
+        free(temp);
+    }
+    Number *result;
+    initNum(&result);
+    result->sign = (a.sign == b.sign);
+    if (scale == 0)
+    {
+        result->int_part = c1;
+        result->int_len = len;
+        result->dec_len = 0;
+        result->dec_part = NULL;
+    }
+    else
+    {
+        result->dec_part = c1;
+        if (len <= scale)
+        {
+            for (int i = 1; i < len; i++)
+            {
+                c1 = c1->next;
+            }
+            while (len != scale)
+            {
+                len++;
+                c1->next = createDigit(0);
+                c1 = c1->next;
+            }
+            c1->next = NULL;
+            result->dec_len = scale;
+            result->int_len = 0;
+            result->int_part = NULL;
+        }
+        else
+        {
+            for (int i = 0; i < scale - 1; i++)
+            {
+                c1 = c1->next;
+            }
+            result->dec_len = scale;
+            result->int_len = len - scale;
+            result->int_part = c1->next;
+            c1->next = NULL;
+        }
+    }
+    to_string(result);
+    removeIntZeros(result);
+    return result;
+}
+
+void removeIntZeros(Number *a)
+{
+    if (a->str == NULL || a->int_len == 0)
+        return;
+    Digit *t = a->int_part, *temp;
+    int i = 0;
+    while (a->str[i] == '0')
+    {
+        i++;
+    }
+    int k = a->int_len - i;
+    a->int_len -= i;
+    a->str += i;
+    while (k > 1)
+    {
+        t = t->next;
+        k--;
+    }
+    temp = t;
+    t = t->next;
+    temp->next = NULL;
+    while (t)
+    {
+        temp = t;
+        t = temp->next;
+        free(temp);
+    }
+}
+
+Number *num_k(int k)
+{
+    return createNum("0");
 }
