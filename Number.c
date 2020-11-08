@@ -1,26 +1,62 @@
 #include "Number.h"
 #include <stdlib.h>
-#include <limits.h>
 #include <stdio.h>
-#include <string.h>
 
-void combined_int_dec(Number a, Digit **combined, Digit **decLast);
+void combined_int_dec(Number *a, Digit **combined, Digit **decLast);
 Digit *emptyList(int n);
 
-void display(Number a)
+void printList(Digit *t)
 {
-    Digit *t = a.int_part;
+    printf("list : ");
+    while (t)
+    {
+        printf("%d ", t->d);
+        t = t->next;
+    }
+    printf("\n");
+}
+
+void printDebug(Number *a)
+{
+    Digit *t = a->int_part;
+    printf("int part : ");
     while (t)
     {
         printf("%d", t->d);
         t = t->next;
     }
-    printf(" ");
+    printf("\n");
+    printf("dec part : ");
+    t = a->dec_part;
+    while (t)
+    {
+        printf("%d", t->d);
+        t = t->next;
+    }
+    printf("\n");
+    printf("int len :%d  ", a->int_len);
+    printf("dec len :%d  \n", a->dec_len);
+    printf("%s\n\n", a->str);
+}
 
-    if (a.sign == positive)
-        printf("%s\n", a.str);
+Number *NumCopy(Number *n)
+{
+    Number *a = (Number *)malloc(sizeof(Number));
+    a->int_part = n->int_part;
+    a->dec_part = n->dec_part;
+    a->str = n->str;
+    a->sign = n->sign;
+    a->int_len = n->int_len;
+    a->dec_len = n->dec_len;
+    return a;
+}
+void display(Number *a)
+{
+
+    if (a->sign == positive)
+        printf("%s\n", a->str);
     else
-        printf("-%s\n", a.str);
+        printf("-%s\n", a->str);
 }
 
 void to_string(Number *a)
@@ -128,15 +164,15 @@ Number *createNum(char *s)
     return a;
 }
 
-int compare(Number a, Number b)
+int compare(Number *a, Number *b)
 {
     // return 1 if a>b , -1 if a<b, 0 if a==b
-    if (a.sign > b.sign)
+    if (a->sign > b->sign)
         return 1;
-    if (a.sign < b.sign)
+    if (a->sign < b->sign)
         return -1;
 
-    if (a.sign == positive)
+    if (a->sign == positive)
     {
         return abs_compare(a, b);
     }
@@ -148,8 +184,9 @@ int compare(Number a, Number b)
 }
 
 // considers magnitude only
-int abs_compare(Number a, Number b)
+int abs_compare(Number *m, Number *n)
 {
+    Number a = *m, b = *n;
     if (a.int_len > b.int_len)
         return 1;
     if (a.int_len < b.int_len)
@@ -198,13 +235,13 @@ int abs_compare(Number a, Number b)
     return 0;
 }
 
-Number *add(Number a, Number b)
+Number *add(Number *a, Number *b)
 {
     Number *c;
-    if (a.sign == b.sign)
+    if (a->sign == b->sign)
     {
         c = abs_add(a, b);
-        c->sign = a.sign;
+        c->sign = a->sign;
         return c;
     }
     else
@@ -222,27 +259,29 @@ Number *add(Number a, Number b)
         if (t == 1)
         {
             c = abs_subtract(a, b);
-            c->sign = a.sign;
+            c->sign = a->sign;
         }
         else
         {
             c = abs_subtract(b, a);
-            c->sign = b.sign;
+            c->sign = b->sign;
         }
         return c;
     }
 }
 
-Number *subtract(Number a, Number b)
+Number *subtract(Number *a, Number *b)
 {
     // change sign of b and do addition
-    b.sign = !b.sign;
-    return add(a, b);
+    Number *t = NumCopy(b);
+    t->sign = !b->sign;
+    return add(a, t);
 }
 
-Number *abs_add(Number a, Number b)
+Number *abs_add(Number *m, Number *n)
 {
     Number *c;
+    Number a = *m, b = *n;
     initNum(&c);
     Digit *digit;
     Digit *a_cur = a.dec_part, *b_cur = b.dec_part;
@@ -360,9 +399,10 @@ Number *abs_add(Number a, Number b)
     return c;
 }
 
-Number *abs_subtract(Number a, Number b)
+Number *abs_subtract(Number *m, Number *n)
 {
     Number *c;
+    Number a = *m, b = *n;
     initNum(&c);
     Digit *digit;
     Digit *a_cur = a.dec_part, *b_cur = b.dec_part;
@@ -529,23 +569,22 @@ Number *abs_subtract(Number a, Number b)
     return c;
 }
 
-void combined_int_dec(Number a, Digit **combined, Digit **decLast)
+void combined_int_dec(Number *a, Digit **combined, Digit **decLast)
 {
-    Digit *comb = *combined;
-    comb = a.dec_part;
-    if (comb == NULL)
+    if (a->dec_part == NULL)
     {
-        comb = a.int_part;
+        *combined = a->int_part;
         *decLast = NULL;
     }
     else
     {
-        Digit *a_cur = comb;
+        *combined = a->dec_part;
+        Digit *a_cur = *combined;
         while (a_cur->next)
         {
             a_cur = a_cur->next;
         }
-        a_cur->next = a.int_part;
+        a_cur->next = a->int_part;
         *decLast = a_cur;
     }
 }
@@ -562,35 +601,36 @@ Digit *emptyList(int n)
     return res;
 }
 
-Number *multiply(Number a, Number b)
+Number *multiply(Number *m, Number *n)
 {
     // we can ignore position of decimal point and multipply and consider it at end
     Number *c;
+    Number a = *m, b = *n;
     initNum(&c);
     Digit *a1, *a_decLast, *b1, *b_decLast;
-    combined_int_dec(a, &a1, &a_decLast);
-    combined_int_dec(b, &b1, &b_decLast);
+    int mul, carry;
+    combined_int_dec(m, &a1, &a_decLast);
+    combined_int_dec(n, &b1, &b_decLast);
     int max_size = a.int_len + b.int_len + a.dec_len + b.dec_len;
     Digit *result = emptyList(max_size);
     Digit *res1 = result, *res2, *a2 = a1;
     while (b1)
     {
 
-        int carry = 0;
+        carry = 0;
         res2 = res1;
         a1 = a2;
         while (a1)
         {
-            int mul = a1->d * b1->d + carry;
+            mul = a1->d * b1->d + carry;
             res2->d += mul % 10;
-
             // resultant Node  can be greater than 9
             carry = mul / 10 + res2->d / 10;
             res2->d = res2->d % 10;
-
             a1 = a1->next;
             res2 = res2->next;
         }
+
         // if carry is remaining from last multiplication
         if (carry > 0)
         {
@@ -604,18 +644,20 @@ Number *multiply(Number a, Number b)
     if (res2->d == 0)
     {
         c->int_len = a.int_len + b.int_len - 1;
-        while (res1->next->next)
+        if (res1->next)
         {
-            res1 = res1->next;
+            while (res1->next->next)
+            {
+                res1 = res1->next;
+            }
+            res1->next = NULL;
+            free(res2);
         }
-        res1->next = NULL;
-        free(res2);
     }
     else
     {
         c->int_len = a.int_len + b.int_len;
     }
-
     c->dec_len = a.dec_len + b.dec_len;
     c->sign = (a.sign == b.sign); // sign of c is positive(1) if a.sign == b.sign
     if (c->dec_len == 0)
@@ -641,27 +683,46 @@ Number *multiply(Number a, Number b)
     {
         b_decLast->next = NULL;
     }
-
     to_string(c);
     return c;
 }
 // multipy by 10^t
-Number *LeftShift(Number n, int t)
+Number *LeftShift(Number *n, int t)
 {
-    int size = n.int_len;
-    if (t >= n.dec_len)
+    if (n->dec_len == 0)
     {
-        size = size + t + 1; // 1 for \0
+        int size = n->int_len + t;
         char *s = (char *)malloc(size * sizeof(char));
         int i = 0;
-        for (i = 0; i < n.int_len; i++)
+        for (i = 0; i < n->int_len; i++)
         {
-            s[i] = n.str[i];
+            s[i] = n->str[i];
+        }
+        while (i < size)
+        {
+            s[i] = '0';
+            i++;
+        }
+        s[i] = '\0';
+        Number *a = createNum(s);
+        a->sign = n->sign;
+        return a;
+    }
+    int size = n->int_len;
+    if (t >= n->dec_len)
+    {
+        size = n->int_len + t + 1; // 1 for \0
+        char *s = (char *)malloc(size * sizeof(char));
+        int i = 0;
+        for (i = 0; i < n->int_len; i++)
+        {
+            s[i] = n->str[i];
         }
         // i+1 to compensate for '.'
-        while (n.str[i + 1] != '\0')
+
+        while (n->str[i + 1] != '\0')
         {
-            s[i] = n.str[i + 1];
+            s[i] = n->str[i + 1];
             i++;
         }
         while (i < size - 1)
@@ -670,50 +731,53 @@ Number *LeftShift(Number n, int t)
             i++;
         }
         s[i] = '\0';
-        return createNum(s);
+        Number *a = createNum(s);
+        a->sign = n->sign;
+        return a;
     }
     else
     {
-        size = size + n.dec_len + 2; // \0 and '.'
+        size = size + n->dec_len + 2; // \0 and '.'
         char *s = (char *)malloc(size * sizeof(char));
         int i = 0;
-        for (i = 0; i < n.int_len; i++)
+        for (i = 0; i < n->int_len; i++)
         {
-            s[i] = n.str[i];
+            s[i] = n->str[i];
         }
         while (t--)
         {
-            s[i] = n.str[i + 1];
+            s[i] = n->str[i + 1];
             i++;
         }
         s[i++] = '.';
-        while (n.str[i] != '\0')
+        while (n->str[i] != '\0')
         {
-            s[i] = n.str[i];
+            s[i] = n->str[i];
             i++;
         }
         s[i] = '\0';
         Number *a = createNum(s);
-        a->sign = n.sign;
+        a->sign = n->sign;
+        return a;
     }
 }
 
-Number *divide(Number a, Number b, int scale)
+Number *divide(Number *a, Number *b, int scale)
 {
     // first let's convert both into int by muliplying by common factor .
-    if (abs_compare(*LeftShift(a, scale), b) == -1)
+    if (abs_compare(LeftShift(a, scale), b) == -1)
     {
         return num_k(0);
     }
     int len = 0;
-    int mult = a.dec_len > b.dec_len ? a.dec_len : b.dec_len;
+    int mult = a->dec_len > b->dec_len ? a->dec_len : b->dec_len;
     Number *a1, *b1, *divisor, *temp = NULL;
     a1 = LeftShift(a, mult + scale);
     b1 = LeftShift(b, mult);
     Digit *c1 = NULL, *digit, *tempDigit;
-    divisor = LeftShift(*b1, a1->int_len - b1->int_len);
+    divisor = LeftShift(b1, a1->int_len - b1->int_len);
     int t = 0;
-    while (compare(*a1, *b1) >= 0)
+    while (compare(a1, b1) >= 0)
     {
         len++;
         // printf("a ");
@@ -723,14 +787,14 @@ Number *divide(Number a, Number b, int scale)
         // printf("divisor ");
         // display(*divisor);
         temp = NULL;
-        temp = subtract(*a1, *divisor);
+        temp = subtract(a1, divisor);
         // printf("temp ");
         // display(*temp);
         t = 0;
-        while (compare(*temp, *num_k(0)) >= 0)
+        while (compare(temp, num_k(0)) >= 0)
         {
             a1 = temp;
-            temp = subtract(*a1, *divisor);
+            temp = subtract(a1, divisor);
             t++;
         }
         digit = createDigit(t);
@@ -746,7 +810,7 @@ Number *divide(Number a, Number b, int scale)
     }
     Number *result;
     initNum(&result);
-    result->sign = (a.sign == b.sign);
+    result->sign = (a->sign == b->sign);
     if (scale == 0)
     {
         result->int_part = c1;
@@ -823,4 +887,11 @@ void removeIntZeros(Number *a)
 Number *num_k(int k)
 {
     return createNum("0");
+}
+
+Number *modulo(Number *a, Number *b)
+{
+    Number *t = divide(a, b, 0);
+    Number *m = multiply(b, t);
+    return subtract(a, m);
 }
