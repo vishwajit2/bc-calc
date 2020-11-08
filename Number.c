@@ -604,6 +604,23 @@ Digit *emptyList(int n)
 Number *multiply(Number *m, Number *n)
 {
     // we can ignore position of decimal point and multipply and consider it at end
+    Number *zero = num_zero();
+    Number *one = createNum("1");
+    if (abs_compare(m, one) == 0)
+    {
+        return createNum(n->str);
+    }
+    else if (abs_compare(n, one) == 0)
+    {
+        return createNum(m->str);
+    }
+
+    if (abs_compare(m, zero) == 0 || abs_compare(n, zero) == 0)
+    {
+        return zero;
+    }
+    removeIntZeros(m);
+    removeIntZeros(n);
     Number *c;
     Number a = *m, b = *n;
     initNum(&c);
@@ -684,6 +701,7 @@ Number *multiply(Number *m, Number *n)
         b_decLast->next = NULL;
     }
     to_string(c);
+    removeIntZeros(c);
     return c;
 }
 // multipy by 10^t
@@ -764,10 +782,16 @@ Number *LeftShift(Number *n, int t)
 
 Number *divide(Number *a, Number *b, int scale)
 {
+    if (compare(b, num_zero()) == 0)
+    {
+        printf(".....division by 0.....\n");
+        return NULL;
+    }
+
     // first let's convert both into int by muliplying by common factor .
     if (abs_compare(LeftShift(a, scale), b) == -1)
     {
-        return num_k(0);
+        return num_zero();
     }
     int len = 0;
     int mult = a->dec_len > b->dec_len ? a->dec_len : b->dec_len;
@@ -791,7 +815,7 @@ Number *divide(Number *a, Number *b, int scale)
         // printf("temp ");
         // display(*temp);
         t = 0;
-        while (compare(temp, num_k(0)) >= 0)
+        while (compare(temp, num_zero()) >= 0)
         {
             a1 = temp;
             temp = subtract(a1, divisor);
@@ -884,7 +908,7 @@ void removeIntZeros(Number *a)
     }
 }
 
-Number *num_k(int k)
+Number *num_zero()
 {
     return createNum("0");
 }
@@ -893,5 +917,87 @@ Number *modulo(Number *a, Number *b)
 {
     Number *t = divide(a, b, 0);
     Number *m = multiply(b, t);
-    return subtract(a, m);
+    Number *res = subtract(a, m);
+    free(t);
+    free(m);
+    return res;
+}
+
+Number *removeFractionalPart(Number *n)
+{
+    Number *a = (Number *)malloc(sizeof(Number));
+    a->int_part = n->int_part;
+    a->int_len = n->int_len;
+    a->dec_part = NULL;
+    a->dec_len = 0;
+    a->sign = n->sign;
+    a->str = NULL;
+    to_string(a);
+    return a;
+}
+Number *power(Number *a, Number *pow, int scale)
+{
+    // we dot support fractional powers, let's remove it
+    Number *p;
+    Number *temp, *a_cp;
+    Number *result = createNum("1");
+    if (pow->dec_len != 0)
+    {
+        printf("...fractional powers are not supported...\n");
+        printf("...fractional part will be ignored...\n");
+    }
+    p = removeFractionalPart(pow);
+    Number *zero = num_zero();
+    Number *one = createNum("1");
+    Number *two = createNum("2");
+    int cmp_zero = compare(p, zero);
+    if (cmp_zero == 0)
+    {
+        return createNum("0");
+    }
+    if (cmp_zero == -1)
+    {
+        p->sign = positive;
+        // we'll take inverse of result at end
+    }
+    int isOdd = 0;
+    int cmp = cmp_zero;
+    while (cmp > 0)
+    {
+        // printf("res ");
+        // display(result);
+        // printf("p ");
+        // display(p);
+        // printf("a ");
+        // display(a);
+        isOdd = p->int_part->d % 2;
+        if (isOdd)
+        {
+            temp = result;
+            result = multiply(result, a);
+            free(temp);
+            temp = p;
+            p = subtract(p, one);
+            free(temp);
+        }
+        else
+        {
+            temp = a;
+            a_cp = createNum(a->str); // copy of a
+            a = multiply(a, a_cp);
+            free(a_cp);
+            free(temp);
+            temp = p;
+            p = divide(p, two, 0);
+            free(temp);
+        }
+        cmp = compare(p, zero);
+    }
+    if (cmp_zero == -1)
+    {
+        temp = result;
+        result = divide(createNum("1"), result, scale);
+        free(temp);
+    }
+    return result;
 }

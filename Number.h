@@ -30,13 +30,14 @@ Number *subtract(Number *a, Number *b);
 Number *LeftShift(Number *n, int t);
 Number *multiply(Number *a, Number *b);
 Number *divide(Number *a, Number *b, int scale);
+Number *power(Number *a, Number *b, int scale);
 void display(Number *a);
 void to_string(Number *a);
 void initNum(Number **n);
 Number *createNum(char *s); // create a number from given string and return pointer to that number
 Digit *createDigit(int t);  // create a Digit from given int and return pointer to that Digit
 void removeIntZeros(Number *a);
-Number *num_k(int k);
+Number *num_zero();
 Number *modulo(Number *a, Number *b);
 void printList(Digit *t);
 void combined_int_dec(Number *a, Digit **combined, Digit **decLast);
