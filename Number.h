@@ -21,6 +21,8 @@ typedef struct Number
 #define positive 1
 #define negative 0
 
+void addDigitInt(Number *a, char ch);
+void addDigitDec(Number *a, char ch);
 int compare(Number *a, Number *b);
 int abs_compare(Number *a, Number *b);
 Number *abs_add(Number *a, Number *b);
@@ -42,4 +44,7 @@ Number *modulo(Number *a, Number *b);
 void printList(Digit *t);
 void combined_int_dec(Number *a, Digit **combined, Digit **decLast);
 Number *NumCopy(Number *n);
+double toReal(Number *a);
+Number *realToNumber(double a);
+void printDebug(Number *a);
 #endif

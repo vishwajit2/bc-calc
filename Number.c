@@ -59,6 +59,28 @@ void display(Number *a)
         printf("-%s\n", a->str);
 }
 
+void addDigitInt(Number *a, char ch)
+{
+    if (ch < '0' || ch > '9')
+        return;
+    Digit *tmp = createDigit(ch - '0');
+    tmp->next = a->int_part;
+    a->int_part = tmp;
+    a->int_len = a->int_len + 1;
+    return;
+}
+
+void addDigitDec(Number *a, char ch)
+{
+    if (ch < '0' || ch > '9')
+        return;
+    Digit *tmp = createDigit(ch - '0');
+    tmp->next = a->dec_part;
+    a->dec_part = tmp;
+    a->dec_len = a->dec_len + 1;
+    return;
+}
+
 void to_string(Number *a)
 {
     int num_size = a->int_len + a->dec_len + 2; // +2 for decimal point and /0
@@ -784,7 +806,7 @@ Number *divide(Number *a, Number *b, int scale)
 {
     if (compare(b, num_zero()) == 0)
     {
-        printf(".....division by 0.....\n");
+        printf(".....divide by 0.....\n");
         return NULL;
     }
 
@@ -796,6 +818,8 @@ Number *divide(Number *a, Number *b, int scale)
     int len = 0;
     int mult = a->dec_len > b->dec_len ? a->dec_len : b->dec_len;
     Number *a1, *b1, *divisor, *temp = NULL;
+    // printDebug(a);
+    // printDebug(b);
     a1 = LeftShift(a, mult + scale);
     b1 = LeftShift(b, mult);
     Digit *c1 = NULL, *digit, *tempDigit;
@@ -803,17 +827,15 @@ Number *divide(Number *a, Number *b, int scale)
     int t = 0;
     while (compare(a1, b1) >= 0)
     {
-        len++;
         // printf("a ");
-        // display(*a1);
+        // display(a1);
         // printf("b ");
-        // display(*b1);
+        // display(b1);
         // printf("divisor ");
-        // display(*divisor);
+        // display(divisor);
+        len++;
         temp = NULL;
         temp = subtract(a1, divisor);
-        // printf("temp ");
-        // display(*temp);
         t = 0;
         while (compare(temp, num_zero()) >= 0)
         {
@@ -832,6 +854,16 @@ Number *divide(Number *a, Number *b, int scale)
         to_string(divisor);
         free(temp);
     }
+    int gap = divisor->int_len - b1->int_len + 1;
+    while (gap != 0)
+    {
+        digit = createDigit(0);
+        digit->next = c1;
+        c1 = digit;
+        len++;
+        gap--;
+    }
+
     Number *result;
     initNum(&result);
     result->sign = (a->sign == b->sign);
@@ -1000,4 +1032,23 @@ Number *power(Number *a, Number *pow, int scale)
         free(temp);
     }
     return result;
+}
+
+double toReal(Number *a)
+{
+    double ans;
+    sscanf(a->str, "%lf", &ans);
+    if (a->sign == negative)
+    {
+        ans = -1 * ans;
+    }
+    return ans;
+}
+//converts double data type in number list.
+Number *realToNumber(double a)
+{
+    char str[128];
+    sprintf(str, "%lf", a);
+    Number *ans = createNum(str);
+    return ans;
 }
