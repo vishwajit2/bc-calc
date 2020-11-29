@@ -10,6 +10,7 @@
 token gettoken(char *expr, int *reset)
 {
     static int i = 0;
+    static int preUnary = 1;
     Number *a;
     initNum(&a);
     char currchar;
@@ -19,6 +20,7 @@ token gettoken(char *expr, int *reset)
     if (*reset == 1)
     {
         currstate = SPACE;
+        preUnary = 1;
         *reset = 0;
         i = 0;
         //t.dec = 0;
@@ -147,12 +149,6 @@ token gettoken(char *expr, int *reset)
                 return t;
                 break;
 
-                // case '.':
-                //     nextstate = DOT;
-                //     i++;
-                //     currstate = nextstate;
-                //     break;
-
             default:
                 nextstate = ERROR;
                 t.type = OPERAND;
@@ -176,15 +172,27 @@ token gettoken(char *expr, int *reset)
             case '7':
             case '8':
             case '9':
-                t.type = OPERATOR;
-                t.op = expr[i - 1];
-                nextstate = NUMBER;
-                currstate = nextstate;
-                //i++;
-                return t;
-                break;
+                if (preUnary)
+                {
+                    a->sign = (expr[i - 1] == '+');
+                    currstate = NUMBER;
+                    // printf("yes in  unary");
+                    preUnary = 0;
+                    break;
+                }
+                else
+                {
+                    t.type = OPERATOR;
+                    t.op = expr[i - 1];
+                    nextstate = NUMBER;
+                    currstate = nextstate;
+                    // printf("not in unary");
+                    return t;
+                    break;
+                }
             case '+':
             case '-':
+                preUnary = 1;
             case '*':
             case '/':
             case '%':
@@ -208,6 +216,7 @@ token gettoken(char *expr, int *reset)
                 return t;
                 break;
             case ' ':
+                preUnary = 1;
                 nextstate = SPACE;
                 t.type = OPERATOR;
                 t.op = expr[i - 1];
@@ -256,8 +265,8 @@ token gettoken(char *expr, int *reset)
             case '8':
             case '9':
                 addDigitInt(a, currchar);
-                // printf("got int %d\n", a->int_part->d);
                 nextstate = NUMBER;
+                preUnary = 0;
                 i++;
                 break;
             case '+':
@@ -283,6 +292,7 @@ token gettoken(char *expr, int *reset)
 
             case '.':
                 nextstate = DOT;
+                preUnary = 0;
                 i++;
                 break;
 
@@ -351,28 +361,17 @@ Number *infix(char *exp)
         if (t.type == OPERAND)
         {
             to_string(t.num);
+            // display(t.num);
         }
         curr = t.type;
         if (curr == prev && prev == OPERAND)
         {
-            //return INT_MIN;
             return NULL;
         }
         if (t.type == OPERAND)
         {
             // display(t.num);
             npush(&ns, t.num);
-            /*if(setpow == 1) {
-								a = npop(&ns);
-								if(t.num->dec != 0)
-									return NULL;
-								b = power(x, t.num);
-								setpow = 0;
-								push(&ns, b);
-							}
-							else {
-								npush(&ns, t.num);
-							}*/
         }
         else if (t.type == OPERATOR)
         {
