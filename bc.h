@@ -25,8 +25,7 @@ enum state
 };
 
 int readline(char *line, int len);
-void modify(char *line);
-Number *infix(char *exp);
+Number *evaluate(char *exp);
 int precedance(char c);
 token gettoken(char *expr, int *reset);
 

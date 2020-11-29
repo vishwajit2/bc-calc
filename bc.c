@@ -338,7 +338,7 @@ int precedance(char c)
     }
     return 5;
 }
-Number *infix(char *exp)
+Number *evaluate(char *exp)
 {
     token t;
     char curr_op, prev_op, ch;
@@ -590,31 +590,6 @@ Number *infix(char *exp)
     }
 }
 
-void modify(char *line)
-{
-    int i;
-    for (i = 0; i < strlen(line); i++)
-    {
-        if (line[i] == '(')
-        {
-            int j = 1;
-            while (line[i + j] == ' ')
-            {
-                j++;
-            }
-            if ((line[i + j] == '-') || (line[i + j] == '+'))
-            {
-                int temp = strlen(line);
-                while (temp >= i + j)
-                {
-                    line[temp + 1] = line[temp];
-                    temp--;
-                }
-                line[i + j] = '0';
-            }
-        }
-    }
-}
 int readline(char *line, int len)
 {
     int i;

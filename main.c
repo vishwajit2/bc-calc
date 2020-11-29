@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     while (readline(line, 4000))
     {
         // modify(line);
-        r = infix(line);
+        r = evaluate(line);
         if (r != NULL)
             display(r);
         else
